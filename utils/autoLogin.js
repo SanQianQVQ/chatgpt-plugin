@@ -4,7 +4,6 @@ import { Config } from '../config/index.js'
 // import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import RecaptchaPlugin from 'puppeteer-extra-plugin-recaptcha'
-import delay from 'delay'
 
 let puppeteer = {}
 
