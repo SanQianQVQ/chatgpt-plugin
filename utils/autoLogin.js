@@ -1,6 +1,10 @@
 import lodash from 'lodash'
 import cfg from '../../../lib/config/config.js'
 import { Config } from '../config/index.js'
+// import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth'
+import RecaptchaPlugin from 'puppeteer-extra-plugin-recaptcha'
+import delay from 'delay'
 
 let puppeteer = {}
 
@@ -10,7 +14,7 @@ class Puppeteer {
       '--disable-gpu',
       '--disable-setuid-sandbox',
       '--no-first-run',
-      '--no-sandbox',
+      '--no-sandbox'
       // '--shm-size=1gb'
     ]
     if (Config.proxy) {
@@ -19,7 +23,7 @@ class Puppeteer {
     this.browser = false
     this.lock = false
     this.config = {
-      headless: true,
+      headless: false,
       args
     }
 
@@ -33,10 +37,23 @@ class Puppeteer {
 
   async initPupp () {
     if (!lodash.isEmpty(puppeteer)) return puppeteer
-
     puppeteer = (await import('puppeteer-extra')).default
-    const StealthPlugin = (await import('puppeteer-extra-plugin-stealth')).default
-    puppeteer.use(StealthPlugin())
+    // const RecaptchaPlugin = (await import('puppeteer-extra-plugin-recaptcha')).default
+    const pluginStealth = StealthPlugin()
+    // const StealthPlugin = (await import('puppeteer-extra-plugin-stealth')).default
+    puppeteer.use(pluginStealth)
+    if (Config['2captcha']) {
+      puppeteer.use(
+        RecaptchaPlugin({
+          provider: {
+            id: '2captcha',
+            token: Config['2captcha'] // REPLACE THIS WITH YOUR OWN 2CAPTCHA API KEY ⚡
+          },
+          visualFeedback: true // colorize reCAPTCHAs (violet = detected, green = solved)
+        })
+      )
+    }
+
     return puppeteer
   }
 
@@ -79,7 +96,7 @@ class Puppeteer {
 }
 
 class ChatGPTPuppeteer extends Puppeteer {
-  async login () {
+  async login (token = '', cfClearance = '') {
     await this.browserInit()
     try {
       const page = await this.browser.newPage()
@@ -105,19 +122,39 @@ class ChatGPTPuppeteer extends Puppeteer {
           await page.setCookie(preCookies[i])
         }
         await page.goto('https://chat.openai.com/chat')
+        await page.waitForXPath('//*[text()="ChatGPT"]')
       } else {
         await page.goto('https://chat.openai.com/auth/login')
         try {
-          await page.waitForXPath('//*[text()="Welcome to ChatGPT"]')
+          await page.waitForXPath('//*[text()="Welcome to ChatGPT"]', { timeout: 10000 })
         } catch (e) {
-          logger.info('可能遇到验证码，建议重试')
-          throw e
-          // const checkbox = await page.waitForXPath('//div[@class=ctp-checkbox-container]')
-          // logger.info('找到了checkbox')
-          // await checkbox.click()
-          // logger.info('模拟点击checkbox')
-          // await page.waitForNavigation()
-          // await page.waitForXPath('//*[text()="Welcome to ChatGPT"]')
+          logger.info('可能遇到验证码')
+          // throw e
+          let recaptchas = await page.findRecaptchas()
+          while (recaptchas && recaptchas.captchas?.length > 0) {
+            logger.info('遇到hCaptcha验证码')
+            if (Config['2captcha']) {
+              logger.info('配置了验证码方案，尝试解决验证码')
+              await page.solveRecaptchas()
+              await page.waitForNavigation()
+              recaptchas = await page.findRecaptchas()
+              logger.info('解决了验证码')
+            } else {
+              throw e
+            }
+          }
+          try {
+            const checkbox = await page.waitForXPath('//div[@class="ctp-checkbox-container"]', { timeout: 5000 })
+            logger.info('找到了checkbox')
+            await checkbox.click()
+            await page.evaluate(() => {
+              document.querySelector('#cf-stage > div.ctp-checkbox-container > label > input[type=checkbox]'.click())
+            })
+            logger.info('模拟点击checkbox')
+          } catch (e) {
+            // 没遇到点击验证
+            await page.waitForXPath('//*[text()="Welcome to ChatGPT"]')
+          }
         }
         await page.waitForNavigation()
         const loginBtn = await page.waitForXPath('//button[contains(text(),"Log in")]')

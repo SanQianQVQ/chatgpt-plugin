@@ -127,7 +127,7 @@ export class chatgpt extends plugin {
       sessionToken,
       clearanceToken,
       markdown: true,
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
+      userAgent: Config.UA
     })
   }
 
@@ -205,6 +205,7 @@ export class chatgpt extends plugin {
     if (e.isGroup && !e.atme) {
       return
     }
+    await chatGPTPuppeteer.login(Config.token, Config.cfClearance)
     let cookie = await redis.get('CHATGPT:COOKIES')
     if (cookie) {
       let cookieMap = handleCookie(JSON.parse(cookie))
@@ -216,7 +217,7 @@ export class chatgpt extends plugin {
         logger.info('首次登录chatgpt')
         await this.reply('首次使用本插件正在初始化自动登录中……', true, { recallMsg: 5 })
         try {
-          let newCookie = await chatGPTPuppeteer.login()
+          let newCookie = await chatGPTPuppeteer.login(Config.token, Config.cfClearance)
           this.createAPI(newCookie['__Secure-next-auth.session-token'], newCookie.cf_clearance)
         } catch (e) {
           await this.reply('自动登录失败，请检查日志或稍后重试', true)
