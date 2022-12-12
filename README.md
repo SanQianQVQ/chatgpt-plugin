@@ -3,7 +3,7 @@
 ## 不稳定分支注意
 本分支用于测试自动登录功能，为解决OpenAI开启Cloudflare防护功能的问题，使用puppeteer操作表单自动登录。不需要填写token，只需在`config/index.js`下配置用户名密码即可。
 
-当然，如果填了token会优先使用token，但由于Cloudflare的限制，必须也填写CF_CLEARANCE，然而该值30分钟就会过期。参见https://github.com/transitive-bullshit/chatgpt-api
+当然，如果填了token会优先使用token，但由于Cloudflare的限制，必须也填写CF_CLEARANCE，然而该值2小时就会过期。参见https://github.com/transitive-bullshit/chatgpt-api
 
 此外，需要机器人登录和发送请求所在ip相同，目前支持设置登录使用proxy，同样在config中配置。但发送请求目前由于库的限制不支持代理。为了保证ip一致，可能需要开启透明代理，如clash premium的tun模式。待chatgpt-api库更新支持proxy后，此问题将解决。
 
