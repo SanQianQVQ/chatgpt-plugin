@@ -22,9 +22,8 @@ let helpData = [
       {
         icon: 'text',
         title: '#chatgpt文本模式',
-        desc: '机器人以文本形式回答，默认选项'
-      },
-
+        desc: '机器人以文本形式回答'
+      }
     ]
   },
   {
